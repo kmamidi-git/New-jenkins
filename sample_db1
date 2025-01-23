@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        SPARK_HOME = '/home/hr295/spark_files'
+        SPARK_HOME = '/home/hr295/spark'
         JDBC_JAR_PATH = '/home/hr295/spark/jars/postgresql-42.6.0.jar'
     }
 
@@ -16,7 +16,10 @@ pipeline {
                             sh """
                             ssh -o StrictHostKeyChecking=no hr295@192.168.1.77 << 'EOF'
                             set -e
+                            echo "Environment Variables:"
+                            env
                             echo "Running Spark job with ${script}..."
+                            ls -l ${SPARK_HOME}/files/${script}
                             ${SPARK_HOME}/bin/spark-submit ${SPARK_HOME}/files/${script}
                             echo "${script} completed successfully."
                             EOF
