@@ -14,7 +14,7 @@ pipeline {
                     script {
                         // Execute PySpark job on the remote server
                         sh """
-                        ssh -o StrictHostKeyChecking=no hr295@192.168.1.77 << 'EOF'
+                        ssh -o StrictHostKeyChecking=no hr295@192.168.1.77 << EOF
                         set -e
                         export SPARK_HOME=${SPARK_HOME}
                         export JDBC_JAR_PATH=${JDBC_JAR_PATH}
