@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        SPARK_HOME = '/home/hr295/spark'
+        SPARK_HOME = '/home/hr295/spark_files'
         JDBC_JAR_PATH = '/home/hr295/spark/jars/postgresql-42.6.0.jar'
     }
 
