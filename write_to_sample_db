@@ -7,85 +7,37 @@ pipeline {
         PGSQL_USER = 'postgres'
         PGSQL_PASSWORD = 'access'
         JDBC_URL = 'jdbc:postgresql://192.168.1.77:5432/sample_database'
-        SPARK_SCRIPT_PATH = '/home/hr295/spark_files/read_and_write_to_psql.groovy' // Adjust path if needed
+        SPARK_SCRIPT_PATH_1 = '/home/hr295/spark_files/script1.groovy' // First script
+        SPARK_SCRIPT_PATH_2 = '/home/hr295/spark_files/script2.groovy' // Second script
     }
 
     stages {
-        stage('Setup SSH Connection') {
-            steps {
-                script {
-                    sshagent(['spark-server-ssh-credential-id']) { // Replace with your SSH credentials ID
-                        sh "ssh -o StrictHostKeyChecking=no hr295@192.168.1.77 exit"
-                        echo "SSH connection setup completed."
-                    }
-                }
-            }
-        }
-
-        stage('Generate Spark Groovy Script') {
+        stage('Run First Spark Job') {
             steps {
                 script {
                     sshagent(['spark-server-ssh-credential-id']) { // Replace with your SSH credentials ID
                         sh """
                         ssh -o StrictHostKeyChecking=no hr295@192.168.1.77 << 'EOF'
                         set -e
-                        echo "Generating Groovy script on remote server..."
+                        echo "Starting First Spark Job on Remote Server..."
                         
-                        cat << 'GROOVY' > ${SPARK_SCRIPT_PATH}
+                        cat << 'GROOVY1' > ${SPARK_SCRIPT_PATH_1}
+                        // Your first Groovy Spark script
                         import org.apache.spark.sql.SparkSession
                         import org.apache.spark.sql.functions.*
 
                         SparkSession spark = SparkSession.builder()
-                            .appName("Read and Write PostgreSQL Data with NULL Boolean Values")
+                            .appName("First Spark Job")
                             .config("spark.jars", "${JDBC_JAR_PATH}")
                             .getOrCreate()
 
-                        println("JDBC JAR Path: ${JDBC_JAR_PATH}")
+                        println("Running the first job...")
 
-                        Map<String, String> pgsqlProperties = [
-                            "user"     : "${PGSQL_USER}",
-                            "password" : "${PGSQL_PASSWORD}",
-                            "driver"   : "org.postgresql.Driver"
-                        ]
-
-                        String jdbcUrl = "${JDBC_URL}"
-
-                        // Read data from PostgreSQL
-                        def postgresDf = spark.read()
-                            .format("jdbc")
-                            .option("url", jdbcUrl)
-                            .option("dbtable", "reporter_dt")
-                            .option("user", pgsqlProperties.get("user"))
-                            .option("password", pgsqlProperties.get("password"))
-                            .option("driver", pgsqlProperties.get("driver"))
-                            .load()
-
-                        postgresDf.show(false)
-                        postgresDf.printSchema()
-
-                        // Add Is_read (BOOLEAN) and Is_read_time (TIMESTAMP) columns
-                        postgresDf = postgresDf.withColumn("Is_read", lit(null).cast("boolean"))
-                            .withColumn("Is_read_time", current_timestamp())
-
-                        postgresDf.show(false)
-                        postgresDf.printSchema()
-
-                        // Write updated data back to PostgreSQL
-                        postgresDf.write()
-                            .format("jdbc")
-                            .option("url", jdbcUrl)
-                            .option("dbtable", "reporter_dt_with_null1_is_read")
-                            .option("user", pgsqlProperties.get("user"))
-                            .option("password", pgsqlProperties.get("password"))
-                            .option("driver", pgsqlProperties.get("driver"))
-                            .mode("overwrite")
-                            .save()
-
-                        println("Data written to PostgreSQL successfully.")
                         spark.stop()
-                        GROOVY
+                        GROOVY1
 
-                        echo "Groovy script generated successfully."
+                        ${SPARK_HOME}/bin/spark-submit --class org.codehaus.groovy.tools.shell.Main ${SPARK_SCRIPT_PATH_1}
+                        echo "First Spark job completed successfully."
                         EOF
                         """
                     }
@@ -93,16 +45,32 @@ pipeline {
             }
         }
 
-        stage('Run Spark Job') {
+        stage('Run Second Spark Job') {
             steps {
                 script {
-                    sshagent(['spark-server-ssh-credential-id']) { // Replace with your SSH credentials ID
+                    sshagent(['spark-server-ssh-credential-id']) {
                         sh """
                         ssh -o StrictHostKeyChecking=no hr295@192.168.1.77 << 'EOF'
                         set -e
-                        echo "Starting Spark job on remote server..."
-                        ${SPARK_HOME}/bin/spark-submit --class org.codehaus.groovy.tools.shell.Main ${SPARK_SCRIPT_PATH}
-                        echo "Spark job completed successfully."
+                        echo "Starting Second Spark Job on Remote Server..."
+                        
+                        cat << 'GROOVY2' > ${SPARK_SCRIPT_PATH_2}
+                        // Your second Groovy Spark script
+                        import org.apache.spark.sql.SparkSession
+                        import org.apache.spark.sql.functions.*
+
+                        SparkSession spark = SparkSession.builder()
+                            .appName("Second Spark Job")
+                            .config("spark.jars", "${JDBC_JAR_PATH}")
+                            .getOrCreate()
+
+                        println("Running the second job...")
+
+                        spark.stop()
+                        GROOVY2
+
+                        ${SPARK_HOME}/bin/spark-submit --class org.codehaus.groovy.tools.shell.Main ${SPARK_SCRIPT_PATH_2}
+                        echo "Second Spark job completed successfully."
                         EOF
                         """
                     }
@@ -113,11 +81,12 @@ pipeline {
 
     post {
         success {
-            echo "Spark job executed successfully."
+            echo "All Spark jobs executed successfully."
         }
         failure {
-            echo "Spark job execution failed."
+            echo "Failed to execute one or more Spark jobs."
         }
     }
 }
+
 
