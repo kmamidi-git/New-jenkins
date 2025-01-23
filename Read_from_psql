@@ -29,13 +29,3 @@ pipeline {
         }
     }
 
-    post {
-        success {
-            echo "PySpark job executed successfully on the remote server."
-        }
-        failure {
-            echo "PySpark job execution failed."
-        }
-    }
-}
-
