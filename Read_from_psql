@@ -4,27 +4,41 @@ pipeline {
     environment {
         SPARK_HOME = '/home/hr295/spark'
         JDBC_JAR_PATH = '/home/hr295/spark/jars/postgresql-42.6.0.jar'
-        REMOTE_SCRIPT_PATH = '/home/hr295/spark_files/read_postgres.py' // Path to the script on the target server
+        REMOTE_SCRIPT_PATH = '/home/hr295/spark_files/read_postgres.py'
     }
 
     stages {
-        stage('Run PySpark Job') {
+        stage('Run PySpark Job on Remote Server') {
             steps {
                 sshagent(['spark-server-ssh-credential-id']) {
-                    sh """
-                    ssh -o StrictHostKeyChecking=no hr295@192.168.1.77 << 'EOF'
-                    set -e
-                    export SPARK_HOME=${SPARK_HOME}
-                    export JDBC_JAR_PATH=${JDBC_JAR_PATH}
-                    echo "Running PySpark job..."
-                    ${SPARK_HOME}/bin/spark-submit --jars ${JDBC_JAR_PATH} ${REMOTE_SCRIPT_PATH}
-                    echo "PySpark job completed successfully."
-                    EOF
-                    """
+                    script {
+                        // Execute PySpark job on the remote server
+                        sh """
+                        ssh -o StrictHostKeyChecking=no hr295@192.168.1.77 << 'EOF'
+                        set -e
+                        export SPARK_HOME=${SPARK_HOME}
+                        export JDBC_JAR_PATH=${JDBC_JAR_PATH}
+                        echo "Running PySpark job on remote server..."
+                        ${SPARK_HOME}/bin/spark-submit --jars ${JDBC_JAR_PATH} ${REMOTE_SCRIPT_PATH}
+                        echo "PySpark job completed successfully."
+                        EOF
+                        """
+                    }
                 }
             }
         }
     }
+
+    post {
+        success {
+            echo "PySpark job executed successfully on the remote server."
+        }
+        failure {
+            echo "PySpark job execution failed."
+        }
+    }
+}
+
 
     post {
         success {
