@@ -11,14 +11,25 @@ pipeline {
     }
 
     stages {
-        stage('Run Spark Job') {
+        stage('Setup SSH Connection') {
+            steps {
+                script {
+                    sshagent(['spark-server-ssh-credential-id']) { // Replace with your SSH credentials ID
+                        sh "ssh -o StrictHostKeyChecking=no hr295@192.168.1.77 exit"
+                        echo "SSH connection setup completed."
+                    }
+                }
+            }
+        }
+
+        stage('Generate Spark Groovy Script') {
             steps {
                 script {
                     sshagent(['spark-server-ssh-credential-id']) { // Replace with your SSH credentials ID
                         sh """
                         ssh -o StrictHostKeyChecking=no hr295@192.168.1.77 << 'EOF'
                         set -e
-                        echo "Starting Spark job on remote server..."
+                        echo "Generating Groovy script on remote server..."
                         
                         cat << 'GROOVY' > ${SPARK_SCRIPT_PATH}
                         import org.apache.spark.sql.SparkSession
@@ -74,6 +85,22 @@ pipeline {
                         spark.stop()
                         GROOVY
 
+                        echo "Groovy script generated successfully."
+                        EOF
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Run Spark Job') {
+            steps {
+                script {
+                    sshagent(['spark-server-ssh-credential-id']) { // Replace with your SSH credentials ID
+                        sh """
+                        ssh -o StrictHostKeyChecking=no hr295@192.168.1.77 << 'EOF'
+                        set -e
+                        echo "Starting Spark job on remote server..."
                         ${SPARK_HOME}/bin/spark-submit --class org.codehaus.groovy.tools.shell.Main ${SPARK_SCRIPT_PATH}
                         echo "Spark job completed successfully."
                         EOF
@@ -93,3 +120,4 @@ pipeline {
         }
     }
 }
+
