@@ -4,7 +4,7 @@ pipeline {
     environment {
         SPARK_HOME = '/home/hr295/spark'
         JDBC_JAR_PATH = '/home/hr295/spark/jars/postgresql-42.6.0.jar'
-        PYTHON_SCRIPT = '/home/hr295/scripts/read_postgres.py' // Path to the PySpark script
+        PYTHON_SCRIPT = '/home/hr295/spark_files/read_postgres.py' // Path to the PySpark script
     }
 
     stages {
