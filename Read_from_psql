@@ -13,9 +13,10 @@ pipeline {
             steps {
                 sshagent(['spark-server-ssh-credential-id']) {
                     script {
-                        // Ensure script exists on the target server
-                        sh """
-                        scp -o StrictHostKeyChecking=no ${LOCAL_SCRIPT_PATH} hr295@192.168.1.77:${REMOTE_SCRIPT_PATH}
+                        // Ensure script exists on the target server   
+                     sh """
+                     scp -o StrictHostKeyChecking=no /home/hr295/spark_files/read_postgres.py hr295@192.168.1.77:/home/hr295/spark_files/read_postgres.py
+                     scp -o StrictHostKeyChecking=no ${LOCAL_SCRIPT_PATH} hr295@192.168.1.77:${REMOTE_SCRIPT_PATH}
                         ssh -o StrictHostKeyChecking=no hr295@192.168.1.77 << 'EOF'
                         set -e
                         export SPARK_HOME=${SPARK_HOME}
