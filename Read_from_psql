@@ -4,23 +4,28 @@ pipeline {
     environment {
         SPARK_HOME = '/home/hr295/spark'
         JDBC_JAR_PATH = '/home/hr295/spark/jars/postgresql-42.6.0.jar'
-        PYTHON_SCRIPT = '/home/hr295/spark_files/read_postgres.py' // Path to the PySpark script
+        LOCAL_SCRIPT_PATH = '/path/to/read_postgres.py' // Replace with actual path on Jenkins server
+        REMOTE_SCRIPT_PATH = '/home/hr295/spark_files/read_postgres.py'
     }
 
     stages {
-        stage('Run PySpark Job') {
+        stage('Setup and Run PySpark Job') {
             steps {
-                sshagent(['spark-server-ssh-credential-id']) { // Replace with your Jenkins SSH credential ID
-                    sh """
-                    ssh -o StrictHostKeyChecking=no hr295@192.168.1.77 << 'EOF'
-                    set -e
-                    echo "Starting PySpark job..."
-                    export SPARK_HOME=${SPARK_HOME}
-                    export JDBC_JAR_PATH=${JDBC_JAR_PATH}
-                    ${SPARK_HOME}/bin/spark-submit --jars ${JDBC_JAR_PATH} ${PYTHON_SCRIPT}
-                    echo "PySpark job completed successfully."
-                    EOF
-                    """
+                sshagent(['spark-server-ssh-credential-id']) {
+                    script {
+                        // Ensure script exists on the target server
+                        sh """
+                        scp -o StrictHostKeyChecking=no ${LOCAL_SCRIPT_PATH} hr295@192.168.1.77:${REMOTE_SCRIPT_PATH}
+                        ssh -o StrictHostKeyChecking=no hr295@192.168.1.77 << 'EOF'
+                        set -e
+                        export SPARK_HOME=${SPARK_HOME}
+                        export JDBC_JAR_PATH=${JDBC_JAR_PATH}
+                        echo "Running PySpark job..."
+                        ${SPARK_HOME}/bin/spark-submit --jars ${JDBC_JAR_PATH} ${REMOTE_SCRIPT_PATH}
+                        echo "PySpark job completed successfully."
+                        EOF
+                        """
+                    }
                 }
             }
         }
