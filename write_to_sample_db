@@ -34,7 +34,7 @@ pipeline {
                         println("Running the first job...")
 
                         spark.stop()
-                        GROOVY1
+                        GROOVY
 
                         ${SPARK_HOME}/bin/spark-submit --class org.codehaus.groovy.tools.shell.Main ${SPARK_SCRIPT_PATH_1}
                         echo "First Spark job completed successfully."
@@ -67,7 +67,7 @@ pipeline {
                         println("Running the second job...")
 
                         spark.stop()
-                        GROOVY2
+                        GROOVY
 
                         ${SPARK_HOME}/bin/spark-submit --class org.codehaus.groovy.tools.shell.Main ${SPARK_SCRIPT_PATH_2}
                         echo "Second Spark job completed successfully."
