@@ -1,0 +1,39 @@
+pipeline {
+    agent any
+
+    environment {
+        SPARK_HOME = '/home/hr295/spark'
+        JDBC_JAR_PATH = '/home/hr295/spark/jars/postgresql-42.6.0.jar'
+    }
+
+    stages {
+        stage('Run Spark Jobs') {
+            steps {
+                script {
+                    def scripts = ['script1.groovy', 'script2.groovy'] // List of script paths
+                    sshagent(['spark-server-ssh-credential-id']) {
+                        for (script in scripts) {
+                            sh """
+                            ssh -o StrictHostKeyChecking=no hr295@192.168.1.77 << 'EOF'
+                            set -e
+                            echo "Running Spark job with ${script}..."
+                            ${SPARK_HOME}/bin/spark-submit ${SPARK_HOME}/files/${script}
+                            echo "${script} completed successfully."
+                            EOF
+                            """
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "All Spark jobs completed successfully."
+        }
+        failure {
+            echo "One or more Spark jobs failed."
+        }
+    }
+}
