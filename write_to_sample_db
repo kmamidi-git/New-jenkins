@@ -1,0 +1,95 @@
+pipeline {
+    agent any
+
+    environment {
+        SPARK_HOME = '/home/hr295/spark'
+        JDBC_JAR_PATH = '/home/hr295/spark/jars/postgresql-42.6.0.jar'
+        PGSQL_USER = 'postgres'
+        PGSQL_PASSWORD = 'access'
+        JDBC_URL = 'jdbc:postgresql://192.168.1.77:5432/sample_database'
+        SPARK_SCRIPT_PATH = '/home/hr295/spark_files/read_and_write_to_psql.groovy' // Adjust path if needed
+    }
+
+    stages {
+        stage('Run Spark Job') {
+            steps {
+                script {
+                    sshagent(['spark-server-ssh-credential-id']) { // Replace with your SSH credentials ID
+                        sh """
+                        ssh -o StrictHostKeyChecking=no hr295@192.168.1.77 << 'EOF'
+                        set -e
+                        echo "Starting Spark job on remote server..."
+                        
+                        cat << 'GROOVY' > ${SPARK_SCRIPT_PATH}
+                        import org.apache.spark.sql.SparkSession
+                        import org.apache.spark.sql.functions.*
+
+                        SparkSession spark = SparkSession.builder()
+                            .appName("Read and Write PostgreSQL Data with NULL Boolean Values")
+                            .config("spark.jars", "${JDBC_JAR_PATH}")
+                            .getOrCreate()
+
+                        println("JDBC JAR Path: ${JDBC_JAR_PATH}")
+
+                        Map<String, String> pgsqlProperties = [
+                            "user"     : "${PGSQL_USER}",
+                            "password" : "${PGSQL_PASSWORD}",
+                            "driver"   : "org.postgresql.Driver"
+                        ]
+
+                        String jdbcUrl = "${JDBC_URL}"
+
+                        // Read data from PostgreSQL
+                        def postgresDf = spark.read()
+                            .format("jdbc")
+                            .option("url", jdbcUrl)
+                            .option("dbtable", "reporter_dt")
+                            .option("user", pgsqlProperties.get("user"))
+                            .option("password", pgsqlProperties.get("password"))
+                            .option("driver", pgsqlProperties.get("driver"))
+                            .load()
+
+                        postgresDf.show(false)
+                        postgresDf.printSchema()
+
+                        // Add Is_read (BOOLEAN) and Is_read_time (TIMESTAMP) columns
+                        postgresDf = postgresDf.withColumn("Is_read", lit(null).cast("boolean"))
+                            .withColumn("Is_read_time", current_timestamp())
+
+                        postgresDf.show(false)
+                        postgresDf.printSchema()
+
+                        // Write updated data back to PostgreSQL
+                        postgresDf.write()
+                            .format("jdbc")
+                            .option("url", jdbcUrl)
+                            .option("dbtable", "reporter_dt_with_null1_is_read")
+                            .option("user", pgsqlProperties.get("user"))
+                            .option("password", pgsqlProperties.get("password"))
+                            .option("driver", pgsqlProperties.get("driver"))
+                            .mode("overwrite")
+                            .save()
+
+                        println("Data written to PostgreSQL successfully.")
+                        spark.stop()
+                        GROOVY
+
+                        ${SPARK_HOME}/bin/spark-submit --class org.codehaus.groovy.tools.shell.Main ${SPARK_SCRIPT_PATH}
+                        echo "Spark job completed successfully."
+                        EOF
+                        """
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Spark job executed successfully."
+        }
+        failure {
+            echo "Spark job execution failed."
+        }
+    }
+}
