@@ -1,0 +1,37 @@
+pipeline {
+    agent any
+
+    environment {
+        SPARK_HOME = '/home/hr295/spark'
+        JDBC_JAR_PATH = '/home/hr295/spark/jars/postgresql-42.6.0.jar'
+        PYTHON_SCRIPT = '/home/hr295/scripts/read_postgres.py' // Path to the PySpark script
+    }
+
+    stages {
+        stage('Run PySpark Job') {
+            steps {
+                sshagent(['spark-server-ssh-credential-id']) { // Replace with your Jenkins SSH credential ID
+                    sh """
+                    ssh -o StrictHostKeyChecking=no hr295@192.168.1.77 << 'EOF'
+                    set -e
+                    echo "Starting PySpark job..."
+                    export SPARK_HOME=${SPARK_HOME}
+                    export JDBC_JAR_PATH=${JDBC_JAR_PATH}
+                    ${SPARK_HOME}/bin/spark-submit --jars ${JDBC_JAR_PATH} ${PYTHON_SCRIPT}
+                    echo "PySpark job completed successfully."
+                    EOF
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "PySpark job executed successfully."
+        }
+        failure {
+            echo "PySpark job execution failed."
+        }
+    }
+}
