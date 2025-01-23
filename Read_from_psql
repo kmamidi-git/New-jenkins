@@ -39,13 +39,3 @@ pipeline {
     }
 }
 
-
-    post {
-        success {
-            echo "PySpark job executed successfully."
-        }
-        failure {
-            echo "PySpark job execution failed."
-        }
-    }
-}
