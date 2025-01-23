@@ -14,7 +14,7 @@ pipeline {
                     sshagent(['spark-server-ssh-credential-id']) {
                         for (script in scripts) {
                             sh """
-                            ssh -o StrictHostKeyChecking=no hr295@192.168.1.77 << EOF
+                            ssh -o StrictHostKeyChecking=no hr295@192.168.1.77 << 'EOF'
                             set -e
                             echo "Running Spark job with ${script}..."
                             ls ${SPARK_HOME}/files/${script}
@@ -38,3 +38,4 @@ pipeline {
         }
     }
 }
+
